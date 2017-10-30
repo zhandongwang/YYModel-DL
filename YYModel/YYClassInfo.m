@@ -260,7 +260,7 @@ YYEncodingType YYEncodingGetType(const char *typeEncoding) {
     _cls = cls;
     _superCls = class_getSuperclass(cls);
     _isMeta = class_isMetaClass(cls);
-    if (!_isMeta) {
+    if (!_isMeta) {//不是元类
         _metaCls = objc_getMetaClass(class_getName(cls));
     }
     _name = NSStringFromClass(cls);
@@ -278,7 +278,7 @@ YYEncodingType YYEncodingGetType(const char *typeEncoding) {
     Class cls = self.cls;
     unsigned int methodCount = 0;
     Method *methods = class_copyMethodList(cls, &methodCount);
-    if (methods) {
+    if (methods) {//获取method信息
         NSMutableDictionary *methodInfos = [NSMutableDictionary new];
         _methodInfos = methodInfos;
         for (unsigned int i = 0; i < methodCount; i++) {
@@ -289,7 +289,7 @@ YYEncodingType YYEncodingGetType(const char *typeEncoding) {
     }
     unsigned int propertyCount = 0;
     objc_property_t *properties = class_copyPropertyList(cls, &propertyCount);
-    if (properties) {
+    if (properties) {//获取property信息
         NSMutableDictionary *propertyInfos = [NSMutableDictionary new];
         _propertyInfos = propertyInfos;
         for (unsigned int i = 0; i < propertyCount; i++) {
@@ -301,7 +301,7 @@ YYEncodingType YYEncodingGetType(const char *typeEncoding) {
     
     unsigned int ivarCount = 0;
     Ivar *ivars = class_copyIvarList(cls, &ivarCount);
-    if (ivars) {
+    if (ivars) {//获取变量信息
         NSMutableDictionary *ivarInfos = [NSMutableDictionary new];
         _ivarInfos = ivarInfos;
         for (unsigned int i = 0; i < ivarCount; i++) {
@@ -335,9 +335,9 @@ YYEncodingType YYEncodingGetType(const char *typeEncoding) {
     dispatch_once(&onceToken, ^{
         classCache = CFDictionaryCreateMutable(CFAllocatorGetDefault(), 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
         metaCache = CFDictionaryCreateMutable(CFAllocatorGetDefault(), 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-        lock = dispatch_semaphore_create(1);
+        lock = dispatch_semaphore_create(1);//信号量创建
     });
-    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
+    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);//线程安全获取classInfo
     YYClassInfo *info = CFDictionaryGetValue(class_isMetaClass(cls) ? metaCache : classCache, (__bridge const void *)(cls));
     if (info && info->_needUpdate) {
         [info _update];
@@ -346,7 +346,7 @@ YYEncodingType YYEncodingGetType(const char *typeEncoding) {
     if (!info) {
         info = [[YYClassInfo alloc] initWithClass:cls];
         if (info) {
-            dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
+            dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);//线程安全存储classInfo
             CFDictionarySetValue(info.isMeta ? metaCache : classCache, (__bridge const void *)(cls), (__bridge const void *)(info));
             dispatch_semaphore_signal(lock);
         }

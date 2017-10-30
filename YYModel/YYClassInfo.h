@@ -177,7 +177,7 @@ YYEncodingType YYEncodingGetType(const char *typeEncoding);
  Get the class info of a specified Class.
  
  @discussion This method will cache the class info and super-class info
- at the first access to the Class. This method is thread-safe.
+ at the first access to the Class. This method is thread-safe.---线程安全----
  
  @param cls A class.
  @return A class info, or nil if an error occurs.

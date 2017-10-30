@@ -72,8 +72,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface NSObject (YYModel)
 
 /**
- Creates and returns a new instance of the receiver from a json.
- This method is thread-safe.
+ Creates and returns a new instance of the receiver from a json. ---json转model---
+ This method is thread-safe. ---线程安全---
  
  @param json  A json object in `NSDictionary`, `NSString` or `NSData`.
  
@@ -82,8 +82,8 @@ NS_ASSUME_NONNULL_BEGIN
 + (nullable instancetype)yy_modelWithJSON:(id)json;
 
 /**
- Creates and returns a new instance of the receiver from a key-value dictionary.
- This method is thread-safe.
+ Creates and returns a new instance of the receiver from a key-value dictionary.---字典转model---
+ This method is thread-safe.    ---线程安全---
  
  @param dictionary  A key-value dictionary mapped to the instance's properties.
  Any invalid key-value pair in dictionary will be ignored.
@@ -103,7 +103,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (nullable instancetype)yy_modelWithDictionary:(NSDictionary *)dictionary;
 
 /**
- Set the receiver's properties with a json object.
+ Set the receiver's properties with a json object.---设置model属性----
  
  @discussion Any invalid data in json will be ignored.
  
@@ -115,7 +115,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)yy_modelSetWithJSON:(id)json;
 
 /**
- Set the receiver's properties with a key-value dictionary.
+ Set the receiver's properties with a key-value dictionary.---设置model属性----
  
  @param dic  A key-value dictionary mapped to the receiver's properties.
  Any invalid key-value pair in dictionary will be ignored.
@@ -137,6 +137,10 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  Generate a json object from the receiver's properties.
  
+ ---1.最外层需要是NSArray或NSDictionary-----
+ ---2.所有对象需要是NSString、NSNumber、NSArray、NSDictionary、NSNull类型-----
+ ---3.字典的key需要是NString类型-----
+
  @return A json object in `NSDictionary` or `NSArray`, or nil if an error occurs.
  See [NSJSONSerialization isValidJSONObject] for more information.
  
@@ -245,7 +249,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface NSDictionary (YYModel)
 
 /**
- Creates and returns a dictionary from a json.
+ Creates and returns a dictionary from a json. ---json转字典----
  This method is thread-safe.
  
  @param cls  The value instance's class in dictionary.
@@ -268,7 +272,7 @@ NS_ASSUME_NONNULL_BEGIN
 @optional
 
 /**
- Custom property mapper.
+ Custom property mapper. ---名称映射----
  
  @discussion If the key in JSON/Dictionary does not match to the model's property name,
  implements this method and returns the additional mapper.
@@ -309,7 +313,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (nullable NSDictionary<NSString *, id> *)modelCustomPropertyMapper;
 
 /**
- The generic class mapper for container properties.
+ The generic class mapper for container properties. ---容器类名映射---
  
  @discussion If the property is a container object, such as NSArray/NSSet/NSDictionary,
  implements this method and returns a property->class mapper, tells which kind of 
@@ -340,7 +344,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (nullable NSDictionary<NSString *, id> *)modelContainerPropertyGenericClass;
 
 /**
- If you need to create instances of different classes during json->object transform,
+ If you need to create instances of different classes during json->object transform, ---json转model时指定其他类----
  use the method to choose custom class based on dictionary data.
  
  @discussion If the model implements this method, it will be called to determine resulting class
@@ -379,7 +383,7 @@ NS_ASSUME_NONNULL_BEGIN
  All the properties in blacklist will be ignored in model transform process.
  Returns nil to ignore this feature.
  
- @return An array of property's name.
+ @return An array of property's name.  ---希望忽略的属性----
  */
 + (nullable NSArray<NSString *> *)modelPropertyBlacklist;
 
@@ -387,7 +391,7 @@ NS_ASSUME_NONNULL_BEGIN
  If a property is not in the whitelist, it will be ignored in model transform process.
  Returns nil to ignore this feature.
  
- @return An array of property's name.
+ @return An array of property's name. ---不希望忽略的属性----
  */
 + (nullable NSArray<NSString *> *)modelPropertyWhitelist;
 
