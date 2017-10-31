@@ -299,6 +299,7 @@ static force_inline id YYValueForKeyPath(__unsafe_unretained NSDictionary *dic, 
 
 /// Get the value with multi key (or key path) from dictionary
 /// The dic should be NSDictionary
+///应用于有多个json key映射到同一个property
 static force_inline id YYValueForMultiKeys(__unsafe_unretained NSDictionary *dic, __unsafe_unretained NSArray *multiKeys) {
     id value = nil;
     for (NSString *key in multiKeys) {
@@ -455,13 +456,13 @@ static force_inline id YYValueForMultiKeys(__unsafe_unretained NSDictionary *dic
     @package
     YYClassInfo *_classInfo;
     /// Key:mapped key and key path, Value:_YYModelPropertyMeta.
-    NSDictionary *_mapper;
+    NSDictionary *_mapper;                  //---@{key/keyPath: propertyMeta}----
     /// Array<_YYModelPropertyMeta>, all property meta of this model.
-    NSArray *_allPropertyMetas;
+    NSArray *_allPropertyMetas;             //---@[propertyMeta]----
     /// Array<_YYModelPropertyMeta>, property meta which is mapped to a key path.
     NSArray *_keyPathPropertyMetas;
     /// Array<_YYModelPropertyMeta>, property meta which is mapped to multi keys.
-    NSArray *_multiKeysPropertyMetas;
+    NSArray *_multiKeysPropertyMetas;       //---多个json key映射到一个property---
     /// The number of mapped key (and key path), same to _mapper.count.
     NSUInteger _keyMappedCount;
     /// Model class type.
@@ -480,7 +481,7 @@ static force_inline id YYValueForMultiKeys(__unsafe_unretained NSDictionary *dic
     if (!classInfo) return nil;
     self = [super init];
     
-    // Get black list
+    // Get black list  ---希望忽略的property-----
     NSSet *blacklist = nil;
     if ([cls respondsToSelector:@selector(modelPropertyBlacklist)]) {
         NSArray *properties = [(id<YYModel>)cls modelPropertyBlacklist];
@@ -489,7 +490,7 @@ static force_inline id YYValueForMultiKeys(__unsafe_unretained NSDictionary *dic
         }
     }
     
-    // Get white list
+    // Get white list  ---希望不要忽略的property-----
     NSSet *whitelist = nil;
     if ([cls respondsToSelector:@selector(modelPropertyWhitelist)]) {
         NSArray *properties = [(id<YYModel>)cls modelPropertyWhitelist];
@@ -498,7 +499,7 @@ static force_inline id YYValueForMultiKeys(__unsafe_unretained NSDictionary *dic
         }
     }
     
-    // Get container property's generic class
+    // Get container property's generic class  -----指定容器类------
     NSDictionary *genericMapper = nil;
     if ([cls respondsToSelector:@selector(modelContainerPropertyGenericClass)]) {
         genericMapper = [(id<YYModel>)cls modelContainerPropertyGenericClass];
@@ -522,7 +523,7 @@ static force_inline id YYValueForMultiKeys(__unsafe_unretained NSDictionary *dic
     }
     
     // Create all property metas.
-    NSMutableDictionary *allPropertyMetas = [NSMutableDictionary new];
+    NSMutableDictionary *allPropertyMetas = [NSMutableDictionary new];//@{propertyName:propertyMeta}
     YYClassInfo *curClassInfo = classInfo;
     while (curClassInfo && curClassInfo.superCls != nil) { // recursive parse super class, but ignore root class (NSObject/NSProxy)
         for (YYClassPropertyInfo *propertyInfo in curClassInfo.propertyInfos.allValues) {
@@ -546,20 +547,20 @@ static force_inline id YYValueForMultiKeys(__unsafe_unretained NSDictionary *dic
     NSMutableArray *keyPathPropertyMetas = [NSMutableArray new];
     NSMutableArray *multiKeysPropertyMetas = [NSMutableArray new];
     
-    if ([cls respondsToSelector:@selector(modelCustomPropertyMapper)]) {
+    if ([cls respondsToSelector:@selector(modelCustomPropertyMapper)]) {// ---自定义名称映射----
         NSDictionary *customMapper = [(id <YYModel>)cls modelCustomPropertyMapper];
         [customMapper enumerateKeysAndObjectsUsingBlock:^(NSString *propertyName, NSString *mappedToKey, BOOL *stop) {
             _YYModelPropertyMeta *propertyMeta = allPropertyMetas[propertyName];
             if (!propertyMeta) return;
             [allPropertyMetas removeObjectForKey:propertyName];
             
-            if ([mappedToKey isKindOfClass:[NSString class]]) {
+            if ([mappedToKey isKindOfClass:[NSString class]]) {//json中的字段为字符串类型
                 if (mappedToKey.length == 0) return;
                 
                 propertyMeta->_mappedToKey = mappedToKey;
                 NSArray *keyPath = [mappedToKey componentsSeparatedByString:@"."];
                 for (NSString *onePath in keyPath) {
-                    if (onePath.length == 0) {
+                    if (onePath.length == 0) {//去掉""
                         NSMutableArray *tmp = keyPath.mutableCopy;
                         [tmp removeObject:@""];
                         keyPath = tmp;
@@ -573,8 +574,7 @@ static force_inline id YYValueForMultiKeys(__unsafe_unretained NSDictionary *dic
                 propertyMeta->_next = mapper[mappedToKey] ?: nil;
                 mapper[mappedToKey] = propertyMeta;
                 
-            } else if ([mappedToKey isKindOfClass:[NSArray class]]) {
-                
+            } else if ([mappedToKey isKindOfClass:[NSArray class]]) {//json中的字段为数组类型
                 NSMutableArray *mappedToKeyArray = [NSMutableArray new];
                 for (NSString *oneKey in ((NSArray *)mappedToKey)) {
                     if (![oneKey isKindOfClass:[NSString class]]) continue;
@@ -631,8 +631,8 @@ static force_inline id YYValueForMultiKeys(__unsafe_unretained NSDictionary *dic
     static dispatch_once_t onceToken;
     static dispatch_semaphore_t lock;
     dispatch_once(&onceToken, ^{
-        cache = CFDictionaryCreateMutable(CFAllocatorGetDefault(), 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-        lock = dispatch_semaphore_create(1);
+        cache = CFDictionaryCreateMutable(CFAllocatorGetDefault(), 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);//缓存创建
+        lock = dispatch_semaphore_create(1);//信号量创建
     });
     dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
     _YYModelMeta *meta = CFDictionaryGetValue(cache, (__bridge const void *)(cls));
@@ -1137,7 +1137,7 @@ static void ModelSetWithPropertyMetaArrayFunction(const void *_propertyMeta, voi
     if (!propertyMeta->_setter) return;
     id value = nil;
     
-    if (propertyMeta->_mappedToKeyArray) {
+    if (propertyMeta->_mappedToKeyArray) {//多个key映射到同一个property
         value = YYValueForMultiKeys(dictionary, propertyMeta->_mappedToKeyArray);
     } else if (propertyMeta->_mappedToKeyPath) {
         value = YYValueForKeyPath(dictionary, propertyMeta->_mappedToKeyPath);
@@ -1460,7 +1460,7 @@ static NSString *ModelDescription(NSObject *model) {
     
     Class cls = [self class];
     _YYModelMeta *modelMeta = [_YYModelMeta metaWithClass:cls];
-    if (modelMeta->_hasCustomClassFromDictionary) {
+    if (modelMeta->_hasCustomClassFromDictionary) {//自定义类
         cls = [cls modelCustomClassForDictionary:dictionary] ?: cls;
     }
     
@@ -1507,7 +1507,7 @@ static NSString *ModelDescription(NSObject *model) {
                                  ModelSetWithPropertyMetaArrayFunction,
                                  &context);
         }
-    } else {
+    } else {//有多个json key映射到同一个property
         CFArrayApplyFunction((CFArrayRef)modelMeta->_allPropertyMetas,
                              CFRangeMake(0, modelMeta->_keyMappedCount),
                              ModelSetWithPropertyMetaArrayFunction,
